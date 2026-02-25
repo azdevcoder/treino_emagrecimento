@@ -1,221 +1,105 @@
 {
   "trainingTypes": [
     {
-      "id": "jogo",
-      "name": "JOGO",
-      "icon": "⚽",
-      "desc": "Partida de Fut7"
+      "id": "caminhada",
+      "name": "Caminhada/Cardio",
+      "icon": "<i class=\"bi bi-person-walking text-info\"></i>",
+      "desc": "Cardio Leve"
     },
     {
-      "id": "recuperacao",
-      "name": "Recuperação Ativa",
-      "icon": "🔄",
-      "desc": "Eliminar fadiga"
+      "id": "musculacao",
+      "name": "Musculação",
+      "icon": "<i class=\"bi bi-universal-access-circle text-primary\"></i>",
+      "desc": "Treino de Força"
     },
     {
-      "id": "hiit_agilidade",
-      "name": "HIIT + Agilidade",
-      "icon": "⚡",
-      "desc": "Explosão e mudança de direção"
+      "id": "hiit",
+      "name": "HIIT/Funcional",
+      "icon": "<i class=\"bi bi-fire text-danger\"></i>",
+      "desc": "Alta Intensidade"
     },
     {
-      "id": "resistencia",
-      "name": "Resistência",
-      "icon": "🏃",
-      "desc": "Base aeróbica"
-    },
-    {
-      "id": "forca_sprints",
-      "name": "Força + Sprints",
-      "icon": "💪",
-      "desc": "Potência muscular"
-    },
-    {
-      "id": "hiit_intenso",
-      "name": "HIIT Intenso",
-      "icon": "🔥",
-      "desc": "Simular intensidade do jogo"
+      "id": "corrida",
+      "name": "Corrida",
+      "icon": "<i class=\"bi bi-stopwatch text-warning\"></i>",
+      "desc": "Cardio Moderado"
     },
     {
       "id": "descanso",
-      "name": "Descanso Total",
-      "icon": "😴",
-      "desc": "Recuperação completa"
+      "name": "Descanso Ativo",
+      "icon": "<i class=\"bi bi-cup-hot-fill text-secondary\"></i>",
+      "desc": "Foco na Dieta"
     }
   ],
   "exercises": {
-    "jogo": [
+    "caminhada": [
       {
-        "name": "Aquecimento",
-        "details": "10 min"
+        "name": "Caminhada 30min",
+        "details": "Ritmo moderado"
       },
       {
-        "name": "Partida",
-        "details": "2x25 min"
+        "name": "Comer Fruta",
+        "details": "Lanche"
+      },
+      {
+        "name": "Bater Meta de Água",
+        "details": "Ao longo do dia"
+      }
+    ],
+    "musculacao": [
+      {
+        "name": "Treino de Força",
+        "details": "45-60 min"
+      },
+      {
+        "name": "Proteína Pós-Treino",
+        "details": "Refeição rica"
       },
       {
         "name": "Alongamento",
         "details": "10 min"
       }
     ],
-    "recuperacao": [
+    "hiit": [
       {
-        "name": "Caminhada leve",
-        "details": "10 min"
+        "name": "Treino HIIT",
+        "details": "15-20 min"
       },
       {
-        "name": "Trote bem leve",
-        "details": "10 min"
+        "name": "Refeição Leve",
+        "details": "Evitar gorduras"
       },
       {
-        "name": "Alongamento dinâmico",
-        "details": "15 min"
-      },
-      {
-        "name": "Alongamento estático",
-        "details": "15 min"
-      },
-      {
-        "name": "Respiração/relaxamento",
-        "details": "10 min"
+        "name": "Dormir 8h",
+        "details": "Recuperação"
       }
     ],
-    "hiit_agilidade": [
+    "corrida": [
       {
-        "name": "Aquecimento",
-        "details": "8 min trote + mobilidade"
+        "name": "Corrida 5km",
+        "details": "No seu ritmo"
       },
       {
-        "name": "Shuttle Run",
-        "details": "5m-10m-15m (6x) - descanso 40s"
+        "name": "Hidratação Extra",
+        "details": "Repor líquidos"
       },
       {
-        "name": "Sprints 20m",
-        "details": "8x com 30s descanso"
-      },
-      {
-        "name": "Zigue-zague cones",
-        "details": "6x (15s cada)"
-      },
-      {
-        "name": "Escada agilidade",
-        "details": "5 min variando padrões"
-      },
-      {
-        "name": "Desaquecimento",
-        "details": "5 min caminhada + alongamento"
-      }
-    ],
-    "resistencia": [
-      {
-        "name": "Aquecimento",
-        "details": "5 min caminhada rápida"
-      },
-      {
-        "name": "Corrida contínua",
-        "details": "25-30 min (ritmo moderado)"
-      },
-      {
-        "name": "Fartlek leve",
-        "details": "4x acelerar 30s durante corrida"
-      },
-      {
-        "name": "Desaquecimento",
-        "details": "5 min caminhada"
-      },
-      {
-        "name": "Alongamento",
-        "details": "10 min"
-      }
-    ],
-    "forca_sprints": [
-      {
-        "name": "Aquecimento",
-        "details": "5 min"
-      },
-      {
-        "name": "Agachamento",
-        "details": "3x15"
-      },
-      {
-        "name": "Afundo alternado",
-        "details": "3x12 (cada perna)"
-      },
-      {
-        "name": "Elevação panturrilha",
-        "details": "3x20"
-      },
-      {
-        "name": "Prancha frontal",
-        "details": "3x30-45s"
-      },
-      {
-        "name": "Prancha lateral",
-        "details": "2x20s (cada lado)"
-      },
-      {
-        "name": "Sprints curtos 10m",
-        "details": "6x"
-      },
-      {
-        "name": "Alongamento",
-        "details": "8 min"
-      }
-    ],
-    "hiit_intenso": [
-      {
-        "name": "Aquecimento",
-        "details": "10 min trote + mobilidade"
-      },
-      {
-        "name": "Circuito 1: Burpees",
-        "details": "10x (3 rodadas)"
-      },
-      {
-        "name": "Circuito 1: Sprints 30m",
-        "details": "3 rodadas"
-      },
-      {
-        "name": "Circuito 1: Polichinelos",
-        "details": "20x (3 rodadas)"
-      },
-      {
-        "name": "Circuito 2: Mountain climber",
-        "details": "20x (3 rodadas)"
-      },
-      {
-        "name": "Circuito 2: Sprint 20m",
-        "details": "3 rodadas"
-      },
-      {
-        "name": "Circuito 2: Agachamento jump",
-        "details": "10x (3 rodadas)"
-      },
-      {
-        "name": "Tiros intervalados",
-        "details": "6x (30s forte / 30s caminhada)"
-      },
-      {
-        "name": "Desaquecimento",
-        "details": "10 min alongamento completo"
+        "name": "Evitar Açúcar",
+        "details": "Durante o dia"
       }
     ],
     "descanso": [
       {
-        "name": "Descanso completo",
-        "details": "ou caminhada leve 20 min"
+        "name": "Alongamento/Yoga",
+        "details": "15 min"
       },
       {
-        "name": "Hidratação",
-        "details": "Beber bastante água"
+        "name": "Manter Jejum",
+        "details": "Se aplicável"
       },
       {
-        "name": "Alimentação",
-        "details": "Boa nutrição"
-      },
-      {
-        "name": "Sono",
-        "details": "Mínimo 7-8 horas"
+        "name": "Zero Refeição Lixo",
+        "details": "Foco no déficit"
       }
     ]
   },
@@ -224,11 +108,11 @@
       "id": 1771972925010,
       "date": "2026-02-24T22:42:05.010Z",
       "type": "recuperacao",
-      "typeName": "Recuperação Ativa",
+      "typeName": "RecuperaÃ§Ã£o Ativa",
       "goals": 0,
       "assists": 0,
       "rating": "bom",
-      "observation": "Satisfeito por hoje, deu pra destravar, mas é só o primeiro dia ",
+      "observation": "Satisfeito por hoje, deu pra destravar, mas Ã© sÃ³ o primeiro dia ",
       "activityTime": 0,
       "restTime": 0,
       "completedExercises": 5,
@@ -242,12 +126,12 @@
       "goals": 0,
       "assists": 0,
       "rating": "ruim",
-      "observation": "Desempenho ruim, estava pesado, e senti muito meu condicionamento fraco, não foi falta de tentar",
+      "observation": "Desempenho ruim, estava pesado, e senti muito meu condicionamento fraco, nÃ£o foi falta de tentar",
       "activityTime": 0,
       "restTime": 0,
       "completedExercises": 3,
       "totalExercises": 3
     }
   ],
-  "lastUpdated": "2026-02-25T01:56:36.350Z"
+  "lastUpdated": "2026-02-25T01:59:47.997Z"
 }
