@@ -684,8 +684,15 @@ async function getFileFromGitHub() {
                 fileSha = d.sha;
                 return JSON.parse(atob(d.content));
             } catch (e) { 
-                // Agora ele entende que "Not Found" significa que é o primeiro envio e retorna nulo para criar o arquivo
-                if (e.message.includes('404') || e.message === 'Not Found') return null; 
+                // Transforma o erro em texto minúsculo para garantir que vai pegar o "not found" ou "404"
+                const erroTxt = (e.message || String(e)).toLowerCase();
+                
+                if (erroTxt.includes('not found') || erroTxt.includes('404')) {
+                    console.warn("Arquivo não existe no GitHub. Criando o primeiro backup...");
+                    return null; // Retorna null para o sistema saber que deve criar o arquivo do zero
+                }
+                
+                // Se for outro erro (ex: credencial inválida), ele avisa
                 throw e; 
             }
         }
@@ -1158,5 +1165,6 @@ async function getFileFromGitHub() {
     </script>
 </body>
 </html>
+
 
 
