@@ -1,4 +1,4 @@
-const CACHE_NAME = 'emagrecimento-app-v2';
+const CACHE_NAME = 'emagrecimento-app-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -26,3 +26,4 @@ self.addEventListener('fetch', event => {
   );
 
 });
+
