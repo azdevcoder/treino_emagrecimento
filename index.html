@@ -678,12 +678,16 @@
             return res.json();
         }
 
-        async function getFileFromGitHub() {
+async function getFileFromGitHub() {
             try {
                 const d = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`);
                 fileSha = d.sha;
                 return JSON.parse(atob(d.content));
-            } catch (e) { if (e.message.includes('404')) return null; throw e; }
+            } catch (e) { 
+                // Agora ele entende que "Not Found" significa que é o primeiro envio e retorna nulo para criar o arquivo
+                if (e.message.includes('404') || e.message === 'Not Found') return null; 
+                throw e; 
+            }
         }
 
         async function saveFileToGitHub(data) {
@@ -1154,4 +1158,5 @@
     </script>
 </body>
 </html>
+
 
