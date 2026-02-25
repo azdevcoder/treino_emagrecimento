@@ -1,5 +1,5 @@
 {
-  "name": "Diário de Emagrecimento",
+  "name": "Ordenando o que estava desordenado",
   "short_name": "Diário Fit",
   "description": "Acompanhe seu peso, calorias, treinos e evolução diária.",
   "start_url": "./index.html",
@@ -21,4 +21,5 @@
       "purpose": "any maskable"
     }
   ]
+
 }
