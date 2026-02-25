@@ -82,6 +82,26 @@
         .border-left-pink { border-left: 4px solid #d63384 !important; }
         .border-left-info { border-left: 4px solid var(--bs-info) !important; }
         .border-left-success { border-left: 4px solid var(--bs-success) !important; }
+
+        /* Estilo para as abas inativas (texto e borda verdes) */
+        .nav-pills .nav-tab {
+            color: var(--bs-success);
+            border-color: var(--bs-success-border-subtle) !important;
+            transition: all 0.3s ease;
+        }
+
+        /* Efeito ao passar o mouse nas abas inativas */
+        .nav-pills .nav-tab:hover {
+            background-color: rgba(25, 135, 84, 0.1); /* Fundo verde clarinho */
+            color: var(--bs-success);
+        }
+
+        /* Estilo para a aba ativa (Fundo verde, texto branco) */
+        .nav-pills .nav-tab.active {
+            background-color: var(--bs-success) !important;
+            color: #ffffff !important;
+            border-color: var(--bs-success) !important;
+        }
     </style>
 </head>
 <body class="bg-body-tertiary">
@@ -122,14 +142,14 @@
                 </div>
             </div>
         </header>
-
+            
         <nav class="nav nav-pills mb-4 gap-2 flex-nowrap overflow-x-auto pb-2" style="white-space: nowrap;">
-            <button class="nav-link nav-tab active rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('treino', this)"><i class="bi bi-journal-text me-2"></i>Diário</button>
-            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('dashboard', this)"><i class="bi bi-graph-up me-2"></i>Dashboard</button>
-            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('historico', this)"><i class="bi bi-clock-history me-2"></i>Histórico</button>
-            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('exercicios', this)"><i class="bi bi-list-check me-2"></i>Atividades</button>
-            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('dicas', this)"><i class="bi bi-lightbulb me-2"></i>Dicas</button>
-            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('config', this)"><i class="bi bi-shield-lock me-2"></i>Segurança</button>
+            <button class="nav-link nav-tab active rounded-pill px-4 border" onclick="showSection('treino', this)"><i class="bi bi-journal-text me-2"></i>Diário</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border" onclick="showSection('dashboard', this)"><i class="bi bi-graph-up me-2"></i>Dashboard</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border" onclick="showSection('historico', this)"><i class="bi bi-clock-history me-2"></i>Histórico</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border" onclick="showSection('exercicios', this)"><i class="bi bi-list-check me-2"></i>Atividades</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border" onclick="showSection('dicas', this)"><i class="bi bi-lightbulb me-2"></i>Dicas</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border" onclick="showSection('config', this)"><i class="bi bi-shield-lock me-2"></i>Segurança</button>
         </nav>
 
         <div id="treino" class="section active">
