@@ -1,6 +1,6 @@
 {
   "name": "Ordenando o que estava desordenado",
-  "short_name": "Ordenando o que estava desordenado",
+  "short_name": "Ordenando",
   "description": "Acompanhe seu peso, calorias, treinos e evolução diária.",
   "start_url": "./index.html",
   "display": "standalone",
@@ -23,4 +23,5 @@
   ]
 
 }
+
 
