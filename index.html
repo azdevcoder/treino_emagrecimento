@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diário Fit - Emagrecimento</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#198754">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bs-body-bg);
+            min-height: 100vh;
+        }
+
+        .section { display: none; }
+        .section.active { display: block; }
+        
+        .transition-all { transition: all 0.3s ease; }
+
+        .sync-indicator {
+            width: 12px; height: 12px; border-radius: 50%;
+            display: inline-block; background: var(--bs-secondary);
+        }
+        .sync-indicator.connected { background: var(--bs-success); animation: pulse 2s infinite; }
+        .sync-indicator.syncing { background: var(--bs-warning); animation: pulse 0.5s infinite; }
+        .sync-indicator.error { background: var(--bs-danger); }
+        .sync-indicator.locked { background: var(--bs-warning); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .training-type-btn { cursor: pointer; transition: all 0.2s; border: 2px solid transparent !important; }
+        .training-type-btn:hover { background-color: var(--bs-tertiary-bg) !important; border-color: var(--bs-success-border-subtle) !important; }
+        .training-type-btn.selected { 
+            border-color: var(--bs-success) !important; 
+            background-color: rgba(25, 135, 84, 0.1) !important; 
+        }
+
+        .exercise-item { transition: all 0.2s; border-left: 4px solid transparent; }
+        .exercise-item.completed { 
+            background-color: rgba(25, 135, 84, 0.1) !important; 
+            border-color: var(--bs-success) !important;
+            border-left: 4px solid var(--bs-success);
+            opacity: 0.8; 
+        }
+
+        .rating-option { cursor: pointer; transition: all 0.2s; user-select: none; }
+        .rating-option.selected { color: white !important; font-weight: bold; }
+        .rating-option[data-value="pessimo"].selected { background-color: var(--bs-danger); border-color: var(--bs-danger); }
+        .rating-option[data-value="ruim"].selected { background-color: #fd7e14; border-color: #fd7e14; }
+        .rating-option[data-value="medio"].selected { background-color: var(--bs-warning); border-color: var(--bs-warning); color: #000 !important; }
+        .rating-option[data-value="bom"].selected { background-color: var(--bs-info); border-color: var(--bs-info); }
+        .rating-option[data-value="otimo"].selected { background-color: var(--bs-success); border-color: var(--bs-success); }
+
+        .full-overlay {
+            display: none; position: fixed; inset: 0; z-index: 2000;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+            align-items: center; justify-content: center;
+        }
+        .full-overlay.active { display: flex !important; }
+
+        .toast-custom {
+            position: fixed; bottom: 30px; right: 30px;
+            transform: translateX(150%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1060; min-width: 250px;
+        }
+        .toast-custom.show { transform: translateX(0); }
+        
+        .border-left-primary { border-left: 4px solid var(--bs-primary) !important; }
+        .border-left-pink { border-left: 4px solid #d63384 !important; }
+        .border-left-info { border-left: 4px solid var(--bs-info) !important; }
+        .border-left-success { border-left: 4px solid var(--bs-success) !important; }
+    </style>
+</head>
+<body class="bg-body-tertiary">
+
+    <div class="full-overlay" id="lockScreen">
+        <div class="card bg-body shadow-lg border-secondary-subtle rounded-4 text-center p-4 p-md-5" style="max-width: 450px; width: 90%;">
+            <i class="bi bi-shield-lock text-success display-1 mb-3"></i>
+            <h2 class="fw-bold text-body">Área Protegida</h2>
+            <p class="text-secondary mb-4">Digite sua senha mestre para acessar seu diário</p>
+            <input type="password" class="form-control form-control-lg text-center mb-3 bg-body-tertiary" id="unlockPassword" placeholder="Senha mestre" onkeypress="if(event.key==='Enter')unlockApp()">
+            <div class="d-grid gap-2">
+                <button class="btn btn-success btn-lg fw-bold rounded-3" onclick="unlockApp()"><i class="bi bi-unlock-fill me-2"></i>Desbloquear</button>
+                <button class="btn btn-outline-secondary rounded-3" onclick="skipUnlock()"><i class="bi bi-wifi-off me-2"></i>Continuar offline</button>
+            </div>
+            <div class="text-danger small mt-3 fw-semibold" id="unlockError" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div class="full-overlay flex-column gap-3" id="loadingOverlay">
+        <div class="spinner-border text-success" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+        <div class="text-white fs-5 fw-medium" id="loadingText">Carregando...</div>
+    </div>
+
+    <div class="container py-4 col-xl-10">
+        
+        <header class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <div class="text-center text-md-start">
+                    <h1 class="h3 mb-1 fw-bold text-body"><i class="bi bi-heart-pulse-fill text-success me-2"></i>Diário Fit</h1>
+                    <p class="text-secondary mb-0">Acompanhe sua saúde e emagrecimento</p>
+                </div>
+                <div class="d-flex align-items-center gap-2 bg-body-tertiary border rounded-pill py-2 px-3 shadow-sm">
+                    <div class="sync-indicator" id="syncIndicator"></div>
+                    <span id="syncStatusText" class="small fw-semibold text-body-secondary me-2">Desconectado</span>
+                    <button class="btn btn-sm btn-success rounded-pill px-3 fw-medium" id="syncBtn" onclick="handleSyncClick()"><i class="bi bi-arrow-repeat me-1"></i> Sincronizar</button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="nav nav-pills mb-4 gap-2 flex-nowrap overflow-x-auto pb-2" style="white-space: nowrap;">
+            <button class="nav-link nav-tab active rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('treino', this)"><i class="bi bi-journal-text me-2"></i>Diário</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('dashboard', this)"><i class="bi bi-graph-up me-2"></i>Dashboard</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('historico', this)"><i class="bi bi-clock-history me-2"></i>Histórico</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('exercicios', this)"><i class="bi bi-list-check me-2"></i>Atividades</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('dicas', this)"><i class="bi bi-lightbulb me-2"></i>Dicas</button>
+            <button class="nav-link nav-tab rounded-pill px-4 border text-success border-success-subtle" onclick="showSection('config', this)"><i class="bi bi-shield-lock me-2"></i>Segurança</button>
+        </nav>
+
+        <div id="treino" class="section active">
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-4 d-flex align-items-center gap-2"><i class="bi bi-activity text-success"></i> Foco do Dia</h4>
+                    <div class="row g-3" id="trainingTypes"></div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-4 d-flex align-items-center gap-2"><i class="bi bi-stopwatch text-success"></i> Tempos</h4>
+                    <div class="row g-4 timer-container">
+                        <div class="col-md-6">
+                            <div class="card border-primary bg-primary bg-opacity-10 h-100 rounded-4">
+                                <div class="card-body text-center p-4">
+                                    <h5 class="text-primary fw-bold mb-3"><i class="bi bi-fire me-2"></i>Treino / Atividade</h5>
+                                    <div class="display-3 fw-bold font-monospace mb-4 text-body" id="activityTimer">00:00:00</div>
+                                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                        <button class="btn btn-primary rounded-pill px-4 timer-btn start fw-medium" id="activityBtn" onclick="toggleTimer('activity')"><i class="bi bi-play-fill me-1"></i> Iniciar</button>
+                                        <button class="btn btn-outline-primary bg-body rounded-pill px-4 timer-btn reset fw-medium" onclick="resetTimer('activity')"><i class="bi bi-arrow-counterclockwise me-1"></i> Zerar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-info bg-info bg-opacity-10 h-100 rounded-4">
+                                <div class="card-body text-center p-4">
+                                    <h5 class="text-info fw-bold mb-3"><i class="bi bi-moon-stars-fill me-2"></i>Jejum / Descanso</h5>
+                                    <div class="display-3 fw-bold font-monospace mb-4 text-body" id="restTimer">00:00:00</div>
+                                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                        <button class="btn btn-info rounded-pill px-4 timer-btn start fw-medium text-white" id="restBtn" onclick="toggleTimer('rest')"><i class="bi bi-play-fill me-1"></i> Iniciar</button>
+                                        <button class="btn btn-outline-info bg-body rounded-pill px-4 timer-btn reset fw-medium" onclick="resetTimer('rest')"><i class="bi bi-arrow-counterclockwise me-1"></i> Zerar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-4 d-flex align-items-center gap-2"><i class="bi bi-check2-square text-success"></i> Check-list e Exercícios</h4>
+                    <div id="exerciseList"><p class="text-secondary text-center my-4">Selecione o foco do dia acima</p></div>
+                    
+                    <div class="mt-4 pt-3 border-top" id="progressContainer" style="display: none;">
+                        <div class="d-flex justify-content-between mb-2 small fw-semibold text-secondary">
+                            <span>Progresso Diário</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress" style="height: 12px; border-radius: 10px;">
+                            <div class="progress-bar bg-success transition-all" id="progressFill" role="progressbar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-4" id="gameStatsCard" style="display: block;">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-4 d-flex align-items-center gap-2"><i class="bi bi-droplet-half text-primary"></i> Nutrição e Água</h4>
+                    <div class="row g-4">
+                        <div class="col-sm-6">
+                            <div class="card border-primary bg-body-tertiary h-100 rounded-4">
+                                <div class="card-body text-center p-4">
+                                    <label class="fw-bold text-primary mb-3 fs-5"><i class="bi bi-cup-straw me-2"></i>Copos de Água</label>
+                                    <div class="d-flex align-items-center justify-content-center gap-3">
+                                        <button class="btn btn-primary rounded-circle text-white shadow-sm fw-bold fs-4" style="width: 48px; height: 48px;" onclick="updateStat('goals', -1)"><i class="bi bi-dash"></i></button>
+                                        <span class="display-5 fw-bold text-body" id="goalsValue" style="min-width: 60px;">0</span>
+                                        <button class="btn btn-primary rounded-circle text-white shadow-sm fw-bold fs-4" style="width: 48px; height: 48px;" onclick="updateStat('goals', 1)"><i class="bi bi-plus"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="card border-success bg-body-tertiary h-100 rounded-4">
+                                <div class="card-body text-center p-4">
+                                    <label class="fw-bold text-success mb-3 fs-5"><i class="bi bi-egg-fried me-2"></i>Refeições Saudáveis</label>
+                                    <div class="d-flex align-items-center justify-content-center gap-3">
+                                        <button class="btn btn-success rounded-circle shadow-sm fw-bold fs-4" style="width: 48px; height: 48px;" onclick="updateStat('assists', -1)"><i class="bi bi-dash"></i></button>
+                                        <span class="display-5 fw-bold text-body" id="assistsValue" style="min-width: 60px;">0</span>
+                                        <button class="btn btn-success rounded-circle shadow-sm fw-bold fs-4" style="width: 48px; height: 48px;" onclick="updateStat('assists', 1)"><i class="bi bi-plus"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-4 d-flex align-items-center gap-2"><i class="bi bi-emoji-smile text-warning"></i> Avaliação do Dia</h4>
+                    <div class="d-flex flex-wrap gap-2 rating-options">
+                        <div class="rating-option badge bg-body border border-secondary-subtle text-body fs-6 py-2 px-3 rounded-pill" data-value="pessimo" onclick="selectRating(this)"><i class="bi bi-emoji-frown me-2"></i>Péssimo</div>
+                        <div class="rating-option badge bg-body border border-secondary-subtle text-body fs-6 py-2 px-3 rounded-pill" data-value="ruim" onclick="selectRating(this)"><i class="bi bi-emoji-expressionless me-2"></i>Ruim</div>
+                        <div class="rating-option badge bg-body border border-secondary-subtle text-body fs-6 py-2 px-3 rounded-pill" data-value="medio" onclick="selectRating(this)"><i class="bi bi-emoji-neutral me-2"></i>Médio</div>
+                        <div class="rating-option badge bg-body border border-secondary-subtle text-body fs-6 py-2 px-3 rounded-pill" data-value="bom" onclick="selectRating(this)"><i class="bi bi-emoji-smile me-2"></i>Bom</div>
+                        <div class="rating-option badge bg-body border border-secondary-subtle text-body fs-6 py-2 px-3 rounded-pill" data-value="otimo" onclick="selectRating(this)"><i class="bi bi-emoji-laughing me-2"></i>Ótimo</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-4 d-flex align-items-center gap-2"><i class="bi bi-journal-text text-success"></i> Notas e Peso (Opcional)</h4>
+                    <textarea class="form-control bg-body-tertiary border-secondary-subtle rounded-3 p-3" id="observation" rows="3" placeholder="Ex: Peso atual: 75.5kg. Treino foi ótimo, sem fome à noite..."></textarea>
+                </div>
+            </div>
+
+            <button class="btn btn-success w-100 py-3 mb-5 fs-5 fw-bold rounded-4 shadow" id="saveBtn" onclick="saveTraining()"><i class="bi bi-floppy me-2"></i>Salvar Registro do Dia</button>
+        </div>
+
+        <div id="dashboard" class="section">
+            <div class="row g-3 mb-4 dashboard-grid">
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 border-left-primary bg-body shadow-sm h-100 rounded-3">
+                        <div class="card-body text-center text-md-start">
+                            <div class="small text-secondary fw-semibold text-uppercase mb-1"><i class="bi bi-calendar-check me-1"></i> Dias Registrados</div>
+                            <div class="fs-2 fw-bold text-body" id="totalTrainings">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 border-left-success bg-body shadow-sm h-100 rounded-3">
+                        <div class="card-body text-center text-md-start">
+                            <div class="small text-secondary fw-semibold text-uppercase mb-1"><i class="bi bi-fire me-1"></i> Dias de Treino</div>
+                            <div class="fs-2 fw-bold text-body" id="totalGames">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 border-left-info bg-body shadow-sm h-100 rounded-3">
+                        <div class="card-body text-center text-md-start">
+                            <div class="small text-secondary fw-semibold text-uppercase mb-1"><i class="bi bi-cup-straw me-1"></i> Total de Água</div>
+                            <div class="fs-2 fw-bold text-body" id="totalGoals">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 border-left-success bg-body shadow-sm h-100 rounded-3">
+                        <div class="card-body text-center text-md-start">
+                            <div class="small text-secondary fw-semibold text-uppercase mb-1"><i class="bi bi-egg-fried me-1"></i> Refeições Saudáveis</div>
+                            <div class="fs-2 fw-bold text-body" id="totalAssists">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-body p-4">
+                            <h4 class="fw-bold mb-4"><i class="bi bi-graph-up-arrow text-success me-2"></i>Disposição / Avaliação</h4>
+                            <canvas id="evolutionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4">
+                            <h4 class="fw-bold mb-4"><i class="bi bi-pie-chart-fill text-success me-2"></i>Foco das Atividades</h4>
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4">
+                            <h4 class="fw-bold mb-4"><i class="bi bi-bar-chart-fill text-success me-2"></i>Água e Refeições</h4>
+                            <canvas id="gameStatsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="historico" class="section">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-4 d-flex align-items-center gap-2"><i class="bi bi-clock-history text-success"></i> Histórico de Registros</h4>
+                    <div id="historyList"><p class="text-secondary text-center my-4">Nenhum registro</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="exercicios" class="section">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-4 d-flex align-items-center gap-2"><i class="bi bi-pencil-square text-success"></i> Gerenciar Checklist Diário</h4>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Tipo de Foco do Dia:</label>
+                        <select class="form-select bg-body-tertiary" id="editTrainingType" onchange="loadExercisesForEdit()">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div id="editExerciseList" class="mb-4"></div>
+                    <button class="btn btn-success fw-bold rounded-pill px-4" onclick="openAddExerciseModal()"><i class="bi bi-plus-lg me-2"></i>Adicionar Item</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dicas" class="section">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h4 class="card-title fw-bold mb-4 d-flex align-items-center gap-2"><i class="bi bi-lightbulb-fill text-warning"></i> Dicas de Saúde</h4>
+                    <div id="tipsContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="config" class="section">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4 p-md-5">
+                    <h3 class="card-title fw-bold border-bottom pb-3 mb-4 d-flex align-items-center gap-2"><i class="bi bi-shield-lock text-success"></i> Segurança e Dados</h3>
+
+                    <div class="mb-5">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-activity text-success me-2"></i>Status</h5>
+                        <div id="securityStatus"></div>
+                    </div>
+
+                    <div class="mb-5 border-top pt-4">
+                        <h5 class="fw-bold mb-2"><i class="bi bi-key-fill text-success me-2"></i>Senha Mestre</h5>
+                        <p class="text-secondary small mb-3">Protege seus dados na nuvem com criptografia AES-256.</p>
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Nova Senha:</label>
+                                <input type="password" id="newMasterPassword" class="form-control bg-body-tertiary" placeholder="Mínimo 6 caracteres" oninput="checkPasswordStrength()">
+                                <div class="progress mt-2" style="height: 6px;">
+                                    <div class="progress-bar transition-all" id="strengthFill" role="progressbar" style="width: 0%;"></div>
+                                </div>
+                                <div class="small mt-1 fw-semibold" id="strengthText"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Confirmar:</label>
+                                <input type="password" id="confirmMasterPassword" class="form-control bg-body-tertiary" placeholder="Repita a senha">
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success fw-semibold rounded-pill px-4" onclick="setMasterPassword()"><i class="bi bi-shield-check me-2"></i>Definir Senha</button>
+                            <button class="btn btn-outline-danger fw-semibold rounded-pill px-4" onclick="removeMasterPassword()" id="removePasswordBtn" style="display: none;"><i class="bi bi-trash me-2"></i>Remover</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-5 border-top pt-4">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-github text-success me-2"></i>Token GitHub</h5>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Token:</label>
+                            <input type="password" id="githubToken" class="form-control bg-body-tertiary" placeholder="ghp_xxxx">
+                        </div>
+                        <div class="d-flex gap-2 mb-4">
+                            <button class="btn btn-success fw-semibold rounded-pill px-4" onclick="saveGitHubToken()"><i class="bi bi-floppy me-2"></i>Salvar Token</button>
+                            <button class="btn btn-outline-danger fw-semibold rounded-pill px-4" onclick="removeGitHubToken()"><i class="bi bi-trash me-2"></i>Remover</button>
+                        </div>
+                        <div class="alert alert-info border-info-subtle small mb-0">
+                            <p class="mb-1"><strong>Como obter:</strong></p>
+                            <p class="mb-1">1. <a href="https://github.com/settings/tokens/new" target="_blank" class="alert-link text-success">github.com/settings/tokens/new</a></p>
+                            <p class="mb-2">2. Escopo exigido: <code class="bg-dark rounded px-1">repo</code></p>
+                            <p class="mb-0"><strong>Repositório Alvo:</strong> <code class="bg-dark rounded px-1">seu_usuario/diario_fit</code></p>
+                        </div>
+                    </div>
+
+                    <div class="mb-5 border-top pt-4">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-cloud-sync text-success me-2"></i>Controles de Nuvem</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-success fw-semibold rounded-pill px-4" onclick="syncWithGitHub()"><i class="bi bi-arrow-repeat me-2"></i>Sincronizar Inteligente</button>
+                            <button class="btn btn-outline-success fw-semibold rounded-pill px-4" onclick="forceUpload()"><i class="bi bi-cloud-arrow-up me-2"></i>Forçar Upload</button>
+                            <button class="btn btn-outline-success fw-semibold rounded-pill px-4" onclick="forceDownload()"><i class="bi bi-cloud-arrow-down me-2"></i>Forçar Download</button>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-4">
+                        <h5 class="fw-bold mb-3 text-danger"><i class="bi bi-database-down me-2"></i>Backup Local & Dados</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-secondary fw-semibold rounded-pill px-4" onclick="exportLocalData()"><i class="bi bi-file-earmark-arrow-down me-2"></i>Exportar JSON</button>
+                            <button class="btn btn-secondary fw-semibold rounded-pill px-4" onclick="document.getElementById('importFile').click()"><i class="bi bi-file-earmark-arrow-up me-2"></i>Importar JSON</button>
+                            <input type="file" id="importFile" accept=".json" style="display:none" onchange="importLocalData(event)">
+                            <button class="btn btn-danger fw-semibold rounded-pill px-4 ms-auto" onclick="clearAllData()"><i class="bi bi-exclamation-triangle me-2"></i>Apagar Tudo</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="full-overlay" id="addExerciseModal">
+        <div class="card bg-body border-secondary-subtle shadow p-4 rounded-4" style="max-width: 500px; width: 90%;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold mb-0">Adicionar Item/Hábito</h4>
+                <button class="btn-close" onclick="closeModal()"></button>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Tipo:</label>
+                <select id="newExerciseType" class="form-select bg-body-tertiary"></select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Nome:</label>
+                <input type="text" id="newExerciseName" class="form-control bg-body-tertiary" placeholder="Ex: Comer 1 maçã">
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Detalhes:</label>
+                <input type="text" id="newExerciseDetails" class="form-control bg-body-tertiary" placeholder="Ex: Lanche da tarde">
+            </div>
+            <button class="btn btn-success fw-bold py-2 w-100 rounded-3" onclick="addNewExercise()">Adicionar</button>
+        </div>
+    </div>
+
+    <div class="toast-custom text-bg-success py-3 px-4 rounded-3 shadow d-flex align-items-center gap-2 fw-bold" id="toast">
+        Mensagem
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Adapte com os dados do seu novo repositório GitHub
+        const GITHUB_REPO = 'seu_usuario/diario_fit';
+        const GITHUB_FILE = 'dados_diario.json';
+        const GITHUB_API = 'https://api.github.com';
+
+        // Crypto
+        async function deriveKey(password, salt) {
+            const enc = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+            return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+        }
+
+        async function encryptData(data, password) {
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const key = await deriveKey(password, salt);
+            const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(data));
+            const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+            combined.set(salt, 0);
+            combined.set(iv, salt.length);
+            combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+            return btoa(String.fromCharCode(...combined));
+        }
+
+        async function decryptData(encryptedData, password) {
+            const combined = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+            const salt = combined.slice(0, 16);
+            const iv = combined.slice(16, 28);
+            const data = combined.slice(28);
+            const key = await deriveKey(password, salt);
+            const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+            return new TextDecoder().decode(decrypted);
+        }
+
+        // Default Data voltado para Emagrecimento
+        const defaultTypes = [
+            { id: 'caminhada', name: 'Caminhada/Cardio', icon: '<i class="bi bi-person-walking text-info"></i>', desc: 'Cardio Leve' },
+            { id: 'musculacao', name: 'Musculação', icon: '<i class="bi bi-universal-access-circle text-primary"></i>', desc: 'Treino de Força' },
+            { id: 'hiit', name: 'HIIT/Funcional', icon: '<i class="bi bi-fire text-danger"></i>', desc: 'Alta Intensidade' },
+            { id: 'corrida', name: 'Corrida', icon: '<i class="bi bi-stopwatch text-warning"></i>', desc: 'Cardio Moderado' },
+            { id: 'descanso', name: 'Descanso Ativo', icon: '<i class="bi bi-cup-hot-fill text-secondary"></i>', desc: 'Foco na Dieta' }
+        ];
+
+        const defaultExercises = {
+            caminhada: [{ name: 'Caminhada 30min', details: 'Ritmo moderado' }, { name: 'Comer Fruta', details: 'Lanche' }, { name: 'Bater Meta de Água', details: 'Ao longo do dia' }],
+            musculacao: [{ name: 'Treino de Força', details: '45-60 min' }, { name: 'Proteína Pós-Treino', details: 'Refeição rica' }, { name: 'Alongamento', details: '10 min' }],
+            hiit: [{ name: 'Treino HIIT', details: '15-20 min' }, { name: 'Refeição Leve', details: 'Evitar gorduras' }, { name: 'Dormir 8h', details: 'Recuperação' }],
+            corrida: [{ name: 'Corrida 5km', details: 'No seu ritmo' }, { name: 'Hidratação Extra', details: 'Repor líquidos' }, { name: 'Evitar Açúcar', details: 'Durante o dia' }],
+            descanso: [{ name: 'Alongamento/Yoga', details: '15 min' }, { name: 'Manter Jejum', details: 'Se aplicável' }, { name: 'Zero Refeição Lixo', details: 'Foco no déficit' }]
+        };
+
+        // State (mantido igual logicamente: goals=água, assists=refeições)
+        let state = { selectedTrainingType: null, goals: 0, assists: 0, rating: null, completedExercises: [], activityTime: 0, restTime: 0, activityRunning: false, restRunning: false, activityInterval: null, restInterval: null };
+        let fileSha = null;
+        let decryptedToken = null;
+        let isUnlocked = false;
+        let charts = { evolution: null, type: null, gameStats: null };
+
+        // Storage
+        const loadLocal = (key, def) => { try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : def; } catch { return def; } };
+        const saveLocal = (key, data) => { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) { console.error(e); } };
+        const getTypes = () => loadLocal('trainingTypes', defaultTypes);
+        const getExercises = () => loadLocal('exercises', defaultExercises);
+        const getHistory = () => loadLocal('trainingHistory', []);
+        const hasToken = () => !!localStorage.getItem('encryptedToken');
+        const hasPassword = () => !!localStorage.getItem('passwordHash');
+
+        // Password
+        async function hashPassword(p) {
+            const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(p + 'diariofit_2024'));
+            return btoa(String.fromCharCode(...new Uint8Array(hash)));
+        }
+
+        async function setMasterPassword() {
+            const p = document.getElementById('newMasterPassword').value;
+            const c = document.getElementById('confirmMasterPassword').value;
+            if (p.length < 6) return showToast('Mínimo 6 caracteres', 'error');
+            if (p !== c) return showToast('Senhas não coincidem', 'error');
+            localStorage.setItem('passwordHash', await hashPassword(p));
+            if (decryptedToken) localStorage.setItem('encryptedToken', await encryptData(decryptedToken, p));
+            document.getElementById('newMasterPassword').value = '';
+            document.getElementById('confirmMasterPassword').value = '';
+            isUnlocked = true;
+            updateSecurityStatus();
+            showToast('Senha definida!');
+        }
+
+        async function removeMasterPassword() {
+            if (!confirm('Remover proteção?')) return;
+            localStorage.removeItem('passwordHash');
+            localStorage.removeItem('encryptedToken');
+            decryptedToken = null;
+            isUnlocked = false;
+            updateSecurityStatus();
+            updateSyncStatus('', 'Desconectado');
+            showToast('Proteção removida');
+        }
+
+        function checkPasswordStrength() {
+            const p = document.getElementById('newMasterPassword').value;
+            let s = 0;
+            if (p.length >= 6) s += 25;
+            if (p.length >= 10) s += 25;
+            if (/[A-Z]/.test(p)) s += 25;
+            if (/[0-9]/.test(p)) s += 25;
+            const fill = document.getElementById('strengthFill');
+            const text = document.getElementById('strengthText');
+            const colors = { 0: ['Fraca', 'var(--bs-danger)'], 50: ['Média', 'var(--bs-warning)'], 75: ['Boa', 'var(--bs-info)'], 100: ['Forte', 'var(--bs-success)'] };
+            const level = s >= 100 ? 100 : s >= 75 ? 75 : s >= 50 ? 50 : 0;
+            fill.style.width = s + '%';
+            fill.style.backgroundColor = colors[level][1];
+            text.textContent = colors[level][0];
+            text.style.color = colors[level][1];
+        }
+
+        // Token
+        async function saveGitHubToken() {
+            const token = document.getElementById('githubToken').value.trim();
+            if (!token) return showToast('Digite o token', 'error');
+            if (!hasPassword()) return showToast('Defina senha primeiro', 'error');
+            if (!isUnlocked) { showLockScreen(); return showToast('Desbloqueie primeiro', 'error'); }
+            const p = prompt('Senha mestre:');
+            if (!p || await hashPassword(p) !== localStorage.getItem('passwordHash')) return showToast('Senha incorreta', 'error');
+            localStorage.setItem('encryptedToken', await encryptData(token, p));
+            decryptedToken = token;
+            document.getElementById('githubToken').value = '';
+            updateSecurityStatus();
+            showToast('Token salvo!');
+            syncWithGitHub();
+        }
+
+        function removeGitHubToken() {
+            if (!confirm('Remover token?')) return;
+            localStorage.removeItem('encryptedToken');
+            decryptedToken = null;
+            updateSecurityStatus();
+            updateSyncStatus('', 'Desconectado');
+            showToast('Token removido');
+        }
+
+        // Lock
+        function showLockScreen() {
+            if (hasPassword() && hasToken()) {
+                document.getElementById('lockScreen').classList.add('active');
+                setTimeout(() => document.getElementById('unlockPassword').focus(), 100);
+            }
+        }
+
+        async function unlockApp() {
+            const p = document.getElementById('unlockPassword').value;
+            const err = document.getElementById('unlockError');
+            if (!p) { err.textContent = 'Digite a senha'; err.style.display = 'block'; return; }
+            if (await hashPassword(p) !== localStorage.getItem('passwordHash')) {
+                err.textContent = 'Senha incorreta';
+                err.style.display = 'block';
+                document.getElementById('unlockPassword').value = '';
+                return;
+            }
+            try {
+                const enc = localStorage.getItem('encryptedToken');
+                if (enc) decryptedToken = await decryptData(enc, p);
+                isUnlocked = true;
+                document.getElementById('lockScreen').classList.remove('active');
+                document.getElementById('unlockPassword').value = '';
+                err.style.display = 'none';
+                updateSecurityStatus();
+                updateSyncStatus('connected', 'Conectado');
+                showToast('Desbloqueado!');
+                syncWithGitHub();
+            } catch { err.textContent = 'Erro ao descriptografar'; err.style.display = 'block'; }
+        }
+
+        function skipUnlock() {
+            document.getElementById('lockScreen').classList.remove('active');
+            updateSyncStatus('locked', 'Bloqueado');
+            showToast('Modo offline', 'warning');
+        }
+
+        function handleSyncClick() {
+            if (hasToken() && !isUnlocked) showLockScreen();
+            else if (!hasToken()) { showSection('config'); showToast('Configure o token', 'warning'); }
+            else syncWithGitHub();
+        }
+
+        function updateSecurityStatus() {
+            const c = document.getElementById('securityStatus');
+            if (!c) return;
+            
+            let h = '<div class="d-flex flex-wrap gap-2 mb-3">';
+            h += hasPassword() ? '<span class="badge rounded-pill bg-success bg-opacity-10 border border-success text-success p-2 px-3 fw-medium"><i class="bi bi-shield-lock-fill me-1"></i> Senha Ativa</span>' : '<span class="badge rounded-pill bg-warning bg-opacity-10 border border-warning text-warning p-2 px-3 fw-medium"><i class="bi bi-exclamation-triangle-fill me-1"></i> Sem Senha</span>';
+            h += hasToken() ? '<span class="badge rounded-pill bg-success bg-opacity-10 border border-success text-success p-2 px-3 fw-medium"><i class="bi bi-lock-fill me-1"></i> Token Criptografado</span>' : '<span class="badge rounded-pill bg-warning bg-opacity-10 border border-warning text-warning p-2 px-3 fw-medium"><i class="bi bi-exclamation-triangle-fill me-1"></i> Sem Token</span>';
+            if (isUnlocked && hasToken()) h += '<span class="badge rounded-pill bg-info bg-opacity-10 border border-info text-info p-2 px-3 fw-medium"><i class="bi bi-unlock-fill me-1"></i> Desbloqueado</span>';
+            h += '</div>';
+            
+            if (hasPassword() && hasToken()) h += '<div class="alert alert-success py-2 px-3 small border-success-subtle mb-0"><i class="bi bi-check-circle-fill me-2"></i> Token protegido com AES-256</div>';
+            else if (!hasPassword()) h += '<div class="alert alert-warning py-2 px-3 small border-warning-subtle mb-0"><i class="bi bi-exclamation-circle-fill me-2"></i> Configure uma senha mestre</div>';
+            
+            c.innerHTML = h;
+            
+            const btn = document.getElementById('removePasswordBtn');
+            if (btn) btn.style.display = hasPassword() ? 'inline-block' : 'none';
+        }
+
+        // GitHub API
+        async function githubRequest(method, endpoint, body = null) {
+            if (!decryptedToken) throw new Error('Token indisponível');
+            const opt = { method, headers: { 'Authorization': `Bearer ${decryptedToken}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' } };
+            if (body) opt.body = JSON.stringify(body);
+            const res = await fetch(`${GITHUB_API}${endpoint}`, opt);
+            if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || `HTTP ${res.status}`);
+            return res.json();
+        }
+
+        async function getFileFromGitHub() {
+            try {
+                const d = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`);
+                fileSha = d.sha;
+                return JSON.parse(atob(d.content));
+            } catch (e) { if (e.message.includes('404')) return null; throw e; }
+        }
+
+        async function saveFileToGitHub(data) {
+            const body = { message: `Update ${new Date().toLocaleString('pt-BR')}`, content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))), branch: 'main' };
+            if (fileSha) body.sha = fileSha;
+            const res = await githubRequest('PUT', `/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`, body);
+            fileSha = res.content.sha;
+        }
+
+        // Sync
+        function updateSyncStatus(status, text) {
+            const ind = document.getElementById('syncIndicator');
+            const txt = document.getElementById('syncStatusText');
+            const btn = document.getElementById('syncBtn');
+            if (ind) ind.className = 'sync-indicator ' + status;
+            if (txt) txt.textContent = text;
+            if (btn) { 
+                btn.className = status === 'locked' ? 'btn btn-sm btn-warning rounded-pill px-3 fw-medium text-dark' : 'btn btn-sm btn-success rounded-pill px-3 fw-medium'; 
+                btn.innerHTML = status === 'locked' ? '<i class="bi bi-unlock me-1"></i> Desbloquear' : '<i class="bi bi-arrow-repeat me-1"></i> Sincronizar'; 
+            }
+        }
+
+        function showLoading(show, text = 'Carregando...') {
+            const o = document.getElementById('loadingOverlay');
+            const t = document.getElementById('loadingText');
+            if (t) t.textContent = text;
+            if (o) o.classList.toggle('active', show);
+        }
+
+        async function syncWithGitHub() {
+            if (!decryptedToken) { if (hasToken()) showLockScreen(); else showToast('Configure token', 'error'); return; }
+            showLoading(true, 'Sincronizando...');
+            updateSyncStatus('syncing', 'Sincronizando...');
+            try {
+                const remote = await getFileFromGitHub();
+                const local = getAllLocalData();
+                if (!remote) { await saveFileToGitHub(local); showToast('Dados enviados!'); }
+                else {
+                    const merged = mergeData(local, remote);
+                    saveAllLocalData(merged);
+                    await saveFileToGitHub(merged);
+                    renderTrainingTypes();
+                    updateDashboardNumbers();
+                    renderHistory();
+                    generateTips();
+                    showToast('Sincronizado!');
+                }
+                updateSyncStatus('connected', 'Conectado');
+            } catch (e) { console.error(e); showToast('Erro: ' + e.message, 'error'); updateSyncStatus('error', 'Erro'); }
+            finally { showLoading(false); }
+        }
+
+        async function forceUpload() {
+            if (!decryptedToken) return showLockScreen();
+            if (!confirm('Sobrescrever GitHub?')) return;
+            showLoading(true, 'Enviando...');
+            try { await saveFileToGitHub(getAllLocalData()); showToast('Upload OK!'); updateSyncStatus('connected', 'Conectado'); }
+            catch (e) { showToast('Erro: ' + e.message, 'error'); }
+            finally { showLoading(false); }
+        }
+
+        async function forceDownload() {
+            if (!decryptedToken) return showLockScreen();
+            if (!confirm('Sobrescrever local?')) return;
+            showLoading(true, 'Baixando...');
+            try {
+                const d = await getFileFromGitHub();
+                if (d) { saveAllLocalData(d); renderTrainingTypes(); updateDashboardNumbers(); renderHistory(); generateTips(); populateEditDropdowns(); showToast('Download OK!'); }
+                else showToast('Nenhum dado', 'error');
+            } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+            finally { showLoading(false); }
+        }
+
+        const getAllLocalData = () => ({ trainingTypes: getTypes(), exercises: getExercises(), trainingHistory: getHistory(), lastUpdated: new Date().toISOString() });
+
+        function saveAllLocalData(d) {
+            if (d.trainingTypes) saveLocal('trainingTypes', d.trainingTypes);
+            if (d.exercises) saveLocal('exercises', d.exercises);
+            if (d.trainingHistory) saveLocal('trainingHistory', d.trainingHistory);
+        }
+
+        function mergeData(local, remote) {
+            const map = new Map();
+            [...(remote.trainingHistory || []), ...(local.trainingHistory || [])].forEach(i => map.set(i.id, i));
+            return {
+                trainingTypes: local.trainingTypes || remote.trainingTypes || defaultTypes,
+                exercises: new Date(local.lastUpdated || 0) > new Date(remote.lastUpdated || 0) ? local.exercises : remote.exercises,
+                trainingHistory: Array.from(map.values()).sort((a, b) => new Date(b.date) - new Date(a.date)),
+                lastUpdated: new Date().toISOString()
+            };
+        }
+
+        // Backup
+        function exportLocalData() {
+            const blob = new Blob([JSON.stringify(getAllLocalData(), null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `diario_fit_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            showToast('Exportado!');
+        }
+
+        function importLocalData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    saveAllLocalData(JSON.parse(ev.target.result));
+                    renderTrainingTypes(); updateDashboardNumbers(); renderHistory(); generateTips(); populateEditDropdowns();
+                    showToast('Importado!');
+                } catch { showToast('Arquivo inválido', 'error'); }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        }
+
+        function clearAllData() {
+            if (!confirm('APAGAR TUDO?')) return;
+            if (!confirm('Confirmar?')) return;
+            localStorage.removeItem('trainingTypes');
+            localStorage.removeItem('exercises');
+            localStorage.removeItem('trainingHistory');
+            renderTrainingTypes(); updateDashboardNumbers(); renderHistory(); generateTips(); populateEditDropdowns();
+            showToast('Dados apagados');
+        }
+
+        // Init
+        function init() {
+            renderTrainingTypes();
+            populateEditDropdowns();
+            updateDashboardNumbers();
+            renderHistory();
+            generateTips();
+            updateSecurityStatus();
+            if (hasPassword() && hasToken()) { updateSyncStatus('locked', 'Bloqueado'); showLockScreen(); }
+            else updateSyncStatus('', 'Não configurado');
+        }
+
+        // Training Types
+        function renderTrainingTypes() {
+            const c = document.getElementById('trainingTypes');
+            if (!c) return;
+            c.innerHTML = getTypes().map(t => `<div class="col-sm-6 col-lg-3"><div class="training-type-btn card h-100 bg-body-tertiary shadow-sm rounded-4 p-3 border-secondary-subtle" data-id="${t.id}" onclick="selectTrainingType('${t.id}')"><div class="fs-1 mb-2">${t.icon}</div><div class="fw-bold fs-5 text-body">${t.name}</div><div class="small text-secondary mt-1">${t.desc}</div></div></div>`).join('');
+        }
+
+        function selectTrainingType(id) {
+            state.selectedTrainingType = id;
+            state.completedExercises = [];
+            document.querySelectorAll('.training-type-btn').forEach(b => b.classList.toggle('selected', b.dataset.id === id));
+            // gameStatsCard está sempre visível na versão de saúde
+            renderExercises(id);
+        }
+
+        // Exercises / Check-list
+        function renderExercises(id) {
+            const c = document.getElementById('exerciseList');
+            const p = document.getElementById('progressContainer');
+            if (!c) return;
+            const ex = getExercises()[id] || [];
+            if (!ex.length) { c.innerHTML = '<p class="text-secondary text-center my-4">Nenhum item adicionado</p>'; if (p) p.style.display = 'none'; return; }
+            if (p) p.style.display = 'block';
+            
+            c.innerHTML = ex.map((e, i) => `<div class="exercise-item card bg-body-tertiary border-secondary-subtle mb-2 rounded-3" data-index="${i}"><div class="card-body p-3 d-flex align-items-center gap-3"><input class="form-check-input mt-0 fs-4 flex-shrink-0" type="checkbox" onchange="toggleExercise(${i})"><div class="flex-grow-1"><div class="fw-semibold text-body">${e.name}</div><div class="small text-secondary">${e.details}</div></div></div></div>`).join('');
+            
+            updateProgress();
+        }
+
+        function toggleExercise(i) {
+            const item = document.querySelector(`.exercise-item[data-index="${i}"]`);
+            if (!item) return;
+            const cb = item.querySelector('input[type="checkbox"]');
+            item.classList.toggle('completed', cb.checked);
+            if (cb.checked && !state.completedExercises.includes(i)) state.completedExercises.push(i);
+            else state.completedExercises = state.completedExercises.filter(x => x !== i);
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const ex = getExercises()[state.selectedTrainingType] || [];
+            const pct = ex.length ? Math.round((state.completedExercises.length / ex.length) * 100) : 0;
+            const pe = document.getElementById('progressPercent');
+            const pf = document.getElementById('progressFill');
+            if (pe) pe.textContent = pct + '%';
+            if (pf) pf.style.width = pct + '%';
+        }
+
+        // Timer
+        function toggleTimer(type) {
+            const btn = document.getElementById(type + 'Btn');
+            if (type === 'activity') {
+                if (state.activityRunning) { clearInterval(state.activityInterval); state.activityRunning = false; if (btn) btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Iniciar'; }
+                else { state.activityInterval = setInterval(() => { state.activityTime++; updateTimerDisplay('activity'); }, 1000); state.activityRunning = true; if (btn) btn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar'; }
+            } else {
+                if (state.restRunning) { clearInterval(state.restInterval); state.restRunning = false; if (btn) btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Iniciar'; }
+                else { state.restInterval = setInterval(() => { state.restTime++; updateTimerDisplay('rest'); }, 1000); state.restRunning = true; if (btn) btn.innerHTML = '<i class="bi bi-pause-fill me-1"></i> Pausar'; }
+            }
+        }
+
+        function resetTimer(type) {
+            const btn = document.getElementById(type + 'Btn');
+            if (type === 'activity') { clearInterval(state.activityInterval); state.activityTime = 0; state.activityRunning = false; }
+            else { clearInterval(state.restInterval); state.restTime = 0; state.restRunning = false; }
+            if (btn) btn.innerHTML = '<i class="bi bi-play-fill me-1"></i> Iniciar';
+            updateTimerDisplay(type);
+        }
+
+        function updateTimerDisplay(type) {
+            const t = type === 'activity' ? state.activityTime : state.restTime;
+            const el = document.getElementById(type + 'Timer');
+            if (el) el.textContent = [Math.floor(t/3600), Math.floor((t%3600)/60), t%60].map(n => String(n).padStart(2,'0')).join(':');
+        }
+
+        // Stats (Água e Refeições)
+        function updateStat(type, d) {
+            if (type === 'goals') { state.goals = Math.max(0, state.goals + d); const e = document.getElementById('goalsValue'); if (e) e.textContent = state.goals; }
+            else { state.assists = Math.max(0, state.assists + d); const e = document.getElementById('assistsValue'); if (e) e.textContent = state.assists; }
+        }
+
+        function selectRating(el) {
+            document.querySelectorAll('.rating-option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            state.rating = el.dataset.value;
+        }
+
+        // Save Training / Dia
+        async function saveTraining() {
+            if (!state.selectedTrainingType) return showToast('Selecione o foco do dia', 'error');
+            if (!state.rating) return showToast('Selecione a avaliação', 'error');
+            const btn = document.getElementById('saveBtn');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Salvando...'; }
+            const training = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                type: state.selectedTrainingType,
+                typeName: getTypes().find(t => t.id === state.selectedTrainingType)?.name,
+                goals: state.goals,
+                assists: state.assists,
+                rating: state.rating,
+                observation: document.getElementById('observation')?.value || '',
+                activityTime: state.activityTime,
+                restTime: state.restTime,
+                completedExercises: state.completedExercises.length,
+                totalExercises: (getExercises()[state.selectedTrainingType] || []).length
+            };
+            const h = getHistory();
+            h.unshift(training);
+            saveLocal('trainingHistory', h);
+            if (decryptedToken) {
+                try { updateSyncStatus('syncing', 'Sincronizando...'); await saveFileToGitHub(getAllLocalData()); updateSyncStatus('connected', 'Conectado'); }
+                catch (e) { console.error(e); updateSyncStatus('error', 'Erro - salvo local'); }
+            }
+            resetForm();
+            updateDashboardNumbers();
+            renderHistory();
+            generateTips();
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-floppy me-2"></i>Salvar Registro do Dia'; }
+            showToast('Salvo com sucesso!');
+        }
+
+        function resetForm() {
+            state.selectedTrainingType = null;
+            state.goals = 0;
+            state.assists = 0;
+            state.rating = null;
+            state.completedExercises = [];
+            resetTimer('activity');
+            resetTimer('rest');
+            const g = document.getElementById('goalsValue');
+            const a = document.getElementById('assistsValue');
+            const o = document.getElementById('observation');
+            const el = document.getElementById('exerciseList');
+            const pc = document.getElementById('progressContainer');
+            if (g) g.textContent = '0';
+            if (a) a.textContent = '0';
+            if (o) o.value = '';
+            if (el) el.innerHTML = '<p class="text-secondary text-center my-4">Selecione o foco do dia acima</p>';
+            if (pc) pc.style.display = 'none';
+            document.querySelectorAll('.training-type-btn').forEach(b => b.classList.remove('selected'));
+            document.querySelectorAll('.rating-option').forEach(o => o.classList.remove('selected'));
+        }
+
+        // Dashboard
+        function updateDashboardNumbers() {
+            const h = getHistory();
+            const tt = document.getElementById('totalTrainings');
+            const tg = document.getElementById('totalGames'); // Usado agora para dias que não são só 'descanso'
+            const tgo = document.getElementById('totalGoals');
+            const ta = document.getElementById('totalAssists');
+            if (tt) tt.textContent = h.length;
+            if (tg) tg.textContent = h.filter(t => t.type !== 'descanso').length;
+            if (tgo) tgo.textContent = h.reduce((s, t) => s + (t.goals || 0), 0);
+            if (ta) ta.textContent = h.reduce((s, t) => s + (t.assists || 0), 0);
+        }
+
+        function renderCharts() {
+            const h = getHistory();
+            const rv = { pessimo: 1, ruim: 2, medio: 3, bom: 4, otimo: 5 };
+
+            // Evolution (Avaliação)
+            const ec = document.getElementById('evolutionChart');
+            if (ec) {
+                if (charts.evolution) charts.evolution.destroy();
+                const last10 = h.slice(0, 10).reverse();
+                charts.evolution = new Chart(ec, {
+                    type: 'line',
+                    data: { labels: last10.map(t => new Date(t.date).toLocaleDateString('pt-BR')), datasets: [{ label: 'Disposição/Nota', data: last10.map(t => rv[t.rating] || 0), borderColor: '#198754', backgroundColor: 'rgba(25, 135, 84, 0.1)', fill: true, tension: 0.4 }] },
+                    options: { responsive: true, plugins: { legend: { labels: { color: '#adb5bd' } } }, scales: { y: { min: 0, max: 5, ticks: { color: '#adb5bd', callback: v => ['','Péssimo','Ruim','Médio','Bom','Ótimo'][v] }, grid: { color: '#495057' } }, x: { ticks: { color: '#adb5bd' }, grid: { color: '#495057' } } } }
+                });
+            }
+
+            // Type
+            const tc = document.getElementById('typeChart');
+            if (tc) {
+                if (charts.type) charts.type.destroy();
+                const types = getTypes();
+                const counts = {};
+                types.forEach(t => counts[t.id] = 0);
+                h.forEach(t => { if (counts[t.type] !== undefined) counts[t.type]++; });
+                charts.type = new Chart(tc, {
+                    type: 'doughnut',
+                    data: { labels: types.map(t => t.name), datasets: [{ data: types.map(t => counts[t.id]), backgroundColor: ['#198754','#0dcaf0','#0d6efd','#ffc107','#6c757d','#dc3545','#6f42c1'], borderColor: 'transparent', borderWidth: 2 }] },
+                    options: { responsive: true, plugins: { legend: { labels: { color: '#adb5bd' } } } }
+                });
+            }
+
+            // Game Stats (Água e Refeições)
+            const gc = document.getElementById('gameStatsChart');
+            if (gc) {
+                if (charts.gameStats) charts.gameStats.destroy();
+                const recents = h.slice(0, 10).reverse();
+                charts.gameStats = new Chart(gc, {
+                    type: 'bar',
+                    data: { labels: recents.map(g => new Date(g.date).toLocaleDateString('pt-BR')), datasets: [{ label: 'Copos D\'Água', data: recents.map(g => g.goals || 0), backgroundColor: '#0dcaf0' }, { label: 'Ref. Saudáveis', data: recents.map(g => g.assists || 0), backgroundColor: '#198754' }] },
+                    options: { responsive: true, plugins: { legend: { labels: { color: '#adb5bd' } } }, scales: { y: { beginAtZero: true, ticks: { color: '#adb5bd' }, grid: { color: '#495057' } }, x: { ticks: { color: '#adb5bd' }, grid: { color: '#495057' } } } }
+                });
+            }
+        }
+
+        // History
+        function renderHistory() {
+            const c = document.getElementById('historyList');
+            if (!c) return;
+            const h = getHistory();
+            if (!h.length) { c.innerHTML = '<p class="text-secondary text-center my-4">Nenhum registro encontrado.</p>'; return; }
+            
+            const colors = { pessimo: 'var(--bs-danger)', ruim: '#fd7e14', medio: 'var(--bs-warning)', bom: 'var(--bs-info)', otimo: 'var(--bs-success)' };
+            const labels = { pessimo: 'Péssimo', ruim: 'Ruim', medio: 'Médio', bom: 'Bom', otimo: 'Ótimo' };
+            
+            c.innerHTML = h.map(t => `<div class="card bg-body-tertiary border-secondary-subtle mb-3 rounded-4 shadow-sm"><div class="card-body p-3 p-md-4 d-flex justify-content-between align-items-center flex-wrap gap-3"><div><div class="fw-bold text-body mb-1">${new Date(t.date).toLocaleDateString('pt-BR')} <span class="text-secondary fw-normal small ms-2">${new Date(t.date).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span></div><div class="small fw-semibold text-secondary"><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle py-1 px-2 me-2">${t.typeName||t.type}</span><span class="badge bg-info bg-opacity-10 text-info border border-info-subtle py-1 px-2 me-1"><i class="bi bi-droplet-fill me-1"></i> ${t.goals}</span> <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle py-1 px-2"><i class="bi bi-egg-fried me-1"></i> ${t.assists}</span></div></div><div class="d-flex align-items-center gap-3"><span class="badge rounded-pill py-2 px-3 text-white shadow-sm" style="background:${colors[t.rating]||'#6c757d'}">${labels[t.rating]||t.rating}</span><button class="btn btn-outline-danger btn-sm rounded-circle shadow-sm" style="width: 36px; height: 36px;" onclick="deleteTraining(${t.id})" title="Excluir"><i class="bi bi-trash"></i></button></div></div></div>`).join('');
+        }
+
+        async function deleteTraining(id) {
+            if (!confirm('Excluir este registro?')) return;
+            saveLocal('trainingHistory', getHistory().filter(t => t.id !== id));
+            if (decryptedToken) try { await saveFileToGitHub(getAllLocalData()); } catch {}
+            updateDashboardNumbers();
+            renderHistory();
+            generateTips();
+            showToast('Excluído com sucesso!');
+        }
+
+        // Exercise Editor (Checklist)
+        function populateEditDropdowns() {
+            const types = getTypes();
+            const opt = '<option value="">Selecione...</option>' + types.map(t => `<option value="${t.id}">${t.icon} ${t.name}</option>`).join('');
+            const e1 = document.getElementById('editTrainingType');
+            const e2 = document.getElementById('newExerciseType');
+            if (e1) e1.innerHTML = opt;
+            if (e2) e2.innerHTML = opt;
+        }
+
+        function loadExercisesForEdit() {
+            const s = document.getElementById('editTrainingType');
+            const c = document.getElementById('editExerciseList');
+            if (!s || !c) return;
+            const id = s.value;
+            if (!id) { c.innerHTML = ''; return; }
+            const ex = getExercises()[id] || [];
+            
+            c.innerHTML = ex.map((e, i) => `<div class="d-flex flex-wrap flex-sm-nowrap gap-2 mb-3"><input type="text" class="form-control bg-body-tertiary" value="${e.name}" placeholder="Nome (Ex: Beber 3L)" onchange="updateExercise('${id}',${i},'name',this.value)"><input type="text" class="form-control bg-body-tertiary" value="${e.details}" placeholder="Detalhes (Opcional)" onchange="updateExercise('${id}',${i},'details',this.value)"><button class="btn btn-outline-danger shadow-sm px-3" onclick="deleteExercise('${id}',${i})" title="Excluir"><i class="bi bi-trash"></i></button></div>`).join('');
+        }
+
+        async function updateExercise(tid, i, f, v) {
+            const ex = getExercises();
+            if (ex[tid]?.[i]) { ex[tid][i][f] = v; saveLocal('exercises', ex); if (decryptedToken) try { await saveFileToGitHub(getAllLocalData()); } catch {} showToast('Atualizado!'); }
+        }
+
+        async function deleteExercise(tid, i) {
+            if (!confirm('Excluir este item?')) return;
+            const ex = getExercises();
+            if (ex[tid]) { ex[tid].splice(i, 1); saveLocal('exercises', ex); if (decryptedToken) try { await saveFileToGitHub(getAllLocalData()); } catch {} loadExercisesForEdit(); showToast('Excluído!'); }
+        }
+
+        function openAddExerciseModal() { document.getElementById('addExerciseModal')?.classList.add('active'); }
+        function closeModal() { document.getElementById('addExerciseModal')?.classList.remove('active'); }
+
+        async function addNewExercise() {
+            const tid = document.getElementById('newExerciseType')?.value;
+            const name = document.getElementById('newExerciseName')?.value.trim();
+            const details = document.getElementById('newExerciseDetails')?.value.trim() || '';
+            if (!tid || !name) return showToast('Preencha o tipo e o nome', 'error');
+            const ex = getExercises();
+            if (!ex[tid]) ex[tid] = [];
+            ex[tid].push({ name, details });
+            saveLocal('exercises', ex);
+            if (decryptedToken) try { await saveFileToGitHub(getAllLocalData()); } catch {}
+            document.getElementById('newExerciseName').value = '';
+            document.getElementById('newExerciseDetails').value = '';
+            closeModal();
+            const es = document.getElementById('editTrainingType');
+            if (es) { es.value = tid; loadExercisesForEdit(); }
+            showToast('Item adicionado!');
+        }
+
+        // Tips
+        function generateTips() {
+            const c = document.getElementById('tipsContainer');
+            if (!c) return;
+            const h = getHistory();
+            const tips = [];
+            if (!h.length) tips.push({ t: '<i class="bi bi-rocket-takeoff text-success me-2"></i>Vamos lá!', p: 'Registre seu primeiro dia na aba Diário.' });
+            tips.push({ t: '<i class="bi bi-droplet-fill text-info me-2"></i>Hidratação', p: 'Multiplique seu peso por 35ml para saber sua meta diária de água.' });
+            tips.push({ t: '<i class="bi bi-moon-stars-fill text-secondary me-2"></i>Sono é vital', p: 'Uma noite de sono ruim aumenta a fome no dia seguinte.' });
+            tips.push({ t: '<i class="bi bi-apple text-danger me-2"></i>Mastigação', p: 'Comer devagar dá tempo para o cérebro perceber a saciedade.' });
+            
+            c.innerHTML = tips.map(t => `<div class="card border-0 border-start border-4 border-success bg-body-tertiary mb-3 shadow-sm"><div class="card-body py-3"><h5 class="text-success fw-bold mb-1">${t.t}</h5><p class="text-secondary mb-0 small">${t.p}</p></div></div>`).join('');
+        }
+
+        // Navigation
+        function showSection(id, tab) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id)?.classList.add('active');
+            if (tab) tab.classList.add('active');
+            if (id === 'dashboard') { updateDashboardNumbers(); setTimeout(renderCharts, 50); }
+            if (id === 'config') updateSecurityStatus();
+            if (id === 'dicas') generateTips();
+        }
+
+        // Toast
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.innerHTML = (type === 'error' ? '<i class="bi bi-x-circle me-2"></i>' : type === 'warning' ? '<i class="bi bi-exclamation-triangle me-2"></i>' : '<i class="bi bi-check-circle me-2"></i>') + msg;
+            
+            t.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-warning');
+            
+            if(type === 'error') t.classList.add('text-bg-danger');
+            else if(type === 'warning') t.classList.add('text-bg-warning');
+            else t.classList.add('text-bg-success');
+
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // Inicia o app e registra o Service Worker
+        document.addEventListener('DOMContentLoaded', () => {
+            init();
+
+            // PWA Service Worker Registration
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker Registrado!', reg.scope))
+                    .catch(err => console.error('Erro no Service Worker', err));
+            }
+        });
+    </script>
+</body>
+</html>
