@@ -1,0 +1,108 @@
+{
+  "trainingTypes": [
+    {
+      "id": "caminhada",
+      "name": "Caminhada/Cardio",
+      "icon": "<i class=\"bi bi-person-walking text-info\"></i>",
+      "desc": "Cardio Leve"
+    },
+    {
+      "id": "musculacao",
+      "name": "Musculação",
+      "icon": "<i class=\"bi bi-universal-access-circle text-primary\"></i>",
+      "desc": "Treino de Força"
+    },
+    {
+      "id": "hiit",
+      "name": "HIIT/Funcional",
+      "icon": "<i class=\"bi bi-fire text-danger\"></i>",
+      "desc": "Alta Intensidade"
+    },
+    {
+      "id": "corrida",
+      "name": "Corrida",
+      "icon": "<i class=\"bi bi-stopwatch text-warning\"></i>",
+      "desc": "Cardio Moderado"
+    },
+    {
+      "id": "descanso",
+      "name": "Descanso Ativo",
+      "icon": "<i class=\"bi bi-cup-hot-fill text-secondary\"></i>",
+      "desc": "Foco na Dieta"
+    }
+  ],
+  "exercises": {
+    "caminhada": [
+      {
+        "name": "Caminhada 30min",
+        "details": "Ritmo moderado"
+      },
+      {
+        "name": "Comer Fruta",
+        "details": "Lanche"
+      },
+      {
+        "name": "Bater Meta de Água",
+        "details": "Ao longo do dia"
+      }
+    ],
+    "musculacao": [
+      {
+        "name": "Treino de Força",
+        "details": "45-60 min"
+      },
+      {
+        "name": "Proteína Pós-Treino",
+        "details": "Refeição rica"
+      },
+      {
+        "name": "Alongamento",
+        "details": "10 min"
+      }
+    ],
+    "hiit": [
+      {
+        "name": "Treino HIIT",
+        "details": "15-20 min"
+      },
+      {
+        "name": "Refeição Leve",
+        "details": "Evitar gorduras"
+      },
+      {
+        "name": "Dormir 8h",
+        "details": "Recuperação"
+      }
+    ],
+    "corrida": [
+      {
+        "name": "Corrida 5km",
+        "details": "No seu ritmo"
+      },
+      {
+        "name": "Hidratação Extra",
+        "details": "Repor líquidos"
+      },
+      {
+        "name": "Evitar Açúcar",
+        "details": "Durante o dia"
+      }
+    ],
+    "descanso": [
+      {
+        "name": "Alongamento/Yoga",
+        "details": "15 min"
+      },
+      {
+        "name": "Manter Jejum",
+        "details": "Se aplicável"
+      },
+      {
+        "name": "Zero Refeição Lixo",
+        "details": "Foco no déficit"
+      }
+    ]
+  },
+  "trainingHistory": [],
+  "lastUpdated": "2026-02-25T01:44:48.612Z"
+}
