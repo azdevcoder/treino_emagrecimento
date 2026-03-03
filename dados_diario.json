@@ -105,6 +105,20 @@
   },
   "trainingHistory": [
     {
+      "id": 1772505754766,
+      "date": "2026-03-03T02:42:34.766Z",
+      "type": "caminhada",
+      "typeName": "Caminhada/Cardio",
+      "goals": 4,
+      "assists": 1,
+      "rating": "medio",
+      "observation": "",
+      "activityTime": 0,
+      "restTime": 0,
+      "completedExercises": 2,
+      "totalExercises": 3
+    },
+    {
       "id": 1771972925010,
       "date": "2026-02-24T22:42:05.010Z",
       "type": "recuperacao",
@@ -133,5 +147,5 @@
       "totalExercises": 3
     }
   ],
-  "lastUpdated": "2026-03-03T02:41:37.739Z"
+  "lastUpdated": "2026-03-03T02:42:34.766Z"
 }
